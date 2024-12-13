@@ -80,6 +80,7 @@ class ModelMeta(BaseModel):
             a benchmark as well as mark dataset contaminations.
         adapted_from: Name of the model from which this model is adapted from. For quantizations, fine-tunes, long doc extensions, etc.
         superseded_by: Name of the model that supersedes this model, e.g. nvidia/NV-Embed-v2 supersedes v1.
+        custom_search: Whether the model Wrapper implements a custom search method. If True, the model will be used in the search method
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -104,6 +105,7 @@ class ModelMeta(BaseModel):
     training_datasets: dict[str, list[str]] | None = None
     adapted_from: str | None = None
     superseded_by: str | None = None
+    custom_search: bool | None = False
 
     def to_dict(self):
         dict_repr = self.model_dump()
