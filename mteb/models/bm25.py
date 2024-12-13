@@ -139,4 +139,5 @@ bm25_s = ModelMeta(
     similarity_fn_name=None,
     framework=[],
     use_instructions=False,
+    custom_search=True,
 )
