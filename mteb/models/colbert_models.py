@@ -149,13 +149,9 @@ def colbert_loader(**kwargs):
             corpus: dict[str, dict[str, str]],
             queries: dict[str, str | list[str]],
             top_k: int,
-            score_function: str,
             return_sorted: bool = False,
             **kwargs,
         ) -> dict[str, dict[str, float]]:
-            
-
-
             if "task_name" in kwargs:
                 task_name = kwargs["task_name"]
                 kwargs.pop("task_name")
@@ -169,8 +165,7 @@ def colbert_loader(**kwargs):
             )
             corpus = [corpus[cid] for cid in corpus_ids]  # type: ignore
 
-
-            # Create the index 
+            # Create the index
             logger.info("Encoding and indexing Corpus...")
 
             index_path = Path(f".cache/pylate-index/{self.model_name}-{task_name}")
@@ -181,12 +176,11 @@ def colbert_loader(**kwargs):
                 index_folder=index_path.as_posix(),
                 index_name=f"index-{self.mteb_model_meta.model_name_as_path()}-{task_name}",
                 override=True,
-                ef_search=top_k+200, # has to be greater than elements to be retrieved
+                ef_search=top_k
+                + 200,  # has to be greater than elements to be retrieved
             )
 
             retriever = colbert_retrieve.ColBERT(index=index)
-
-            
 
             itr = range(0, len(corpus), self.corpus_chunk_size)
             for batch_num, corpus_start_idx in enumerate(itr):
@@ -228,13 +222,12 @@ def colbert_loader(**kwargs):
             print(f"documents_embeddings[0][0] len: {len(sub_corpus_embeddings[0][0])}")
             k_min = min(top_k, len(corpus))
             print(f"k_min: {k_min}")
-            #print(f"index len: {len(index.ef_search.bit_count)}")
-            #if "batch_size" in self.encode_kwargs:
+            # print(f"index len: {len(index.ef_search.bit_count)}")
+            # if "batch_size" in self.encode_kwargs:
 
             scores = retriever.retrieve(
                 queries_embeddings=queries_embeddings,
                 k=k_min,
-                k_token=k_min,
                 **self.encode_kwargs,
             )
             print(f"scores: {len(scores)}")
@@ -253,34 +246,34 @@ def colbert_loader(**kwargs):
             # {'PLAIN-2': {'MED-10': 8.592973709106445, 'MED-14': 8.584940910339355,
             return self.results
 
+        def similarity(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
+            """Computes the max-similarity max_sim(a[i], b[j]) for all i and j.
+                Works with a Tensor of the shape (batch_size, num_tokens, token_dim)
+
+            Return:
+                Matrix with res[i][j]  = max_sim(a[i], b[j])
+            """  # noqa: D402
+            if not isinstance(a, torch.Tensor):
+                a = torch.tensor(a, dtype=torch.float32)
+
+            if not isinstance(b, torch.Tensor):
+                b = torch.tensor(b, dtype=torch.float32)
+
+            if len(a.shape) == 2:
+                a = a.unsqueeze(0)
+
+            if len(b.shape) == 2:
+                b = b.unsqueeze(0)
+
+            scores = torch.einsum(
+                "ash,bth->abst",
+                a,
+                b,
+            )
+
+            return scores.max(axis=-1).values.sum(axis=-1)
+
     return ColBERTWrapper(**kwargs)
-
-    def similarity(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
-        """Computes the max-similarity max_sim(a[i], b[j]) for all i and j.
-            Works with a Tensor of the shape (batch_size, num_tokens, token_dim)
-
-        Return:
-            Matrix with res[i][j]  = max_sim(a[i], b[j])
-        """  # noqa: D402
-        if not isinstance(a, torch.Tensor):
-            a = torch.tensor(a, dtype=torch.float32)
-
-        if not isinstance(b, torch.Tensor):
-            b = torch.tensor(b, dtype=torch.float32)
-
-        if len(a.shape) == 2:
-            a = a.unsqueeze(0)
-
-        if len(b.shape) == 2:
-            b = b.unsqueeze(0)
-
-        scores = torch.einsum(
-            "ash,bth->abst",
-            a,
-            b,
-        )
-
-        return scores.max(axis=-1).values.sum(axis=-1)
 
 
 colbert_v2 = ModelMeta(
