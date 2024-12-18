@@ -54,7 +54,7 @@ class GermanDPR(AbsTaskRetrieval):
             else:
                 id_value = f"{id_prefix}{i}"
                 existing_docs[formatted_content] = id_value
-            result[id_value] = {"title": title, "text": formatted_content}
+            result[id_value] = f"{title} {formatted_content}"
         return result
 
     def load_data(self, **kwargs):
